@@ -1,5 +1,6 @@
 package labbar.bjaern.sensorp4;
 
+import android.content.Intent;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -7,9 +8,12 @@ import android.hardware.SensorManager;
 import android.media.MediaPlayer;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.view.View;
 import android.view.animation.Animation;
 import android.view.animation.RotateAnimation;
+import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.TextView;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
 
@@ -32,21 +36,54 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private float[] mOrientation;
     private boolean useOrientationAPI = false;
     private float mCurrentDegree = 0;
+    private Sensor mStepCounter;
+    private Button btnStop;
+    private Button btnStart;
+    private StepService service;
+    private TextView tvStepsPerSecond;
+    private TextView tvSteps;
+    private int steps;
+    FeedReaderDbHelper mDbHelper = new FeedReaderDbHelper(this);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        this.setTitle("Hello! " + getIntent().getExtras().get("name"));
         mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
         mAccelerometerSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         mMagnetometerSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
         mOrientationSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_ORIENTATION);
         mCompass = (ImageView) findViewById(R.id.ivCompass);
+        btnStart = (Button)findViewById(R.id.btnStart);
+        btnStop = (Button)findViewById(R.id.btnStop);
+        tvSteps = (TextView)findViewById(R.id.tvSteps);
+        tvStepsPerSecond = (TextView)findViewById(R.id.tvStepsPerSeconds);
+        initClickListeners();
+    }
+
+    private void initClickListeners() {
+        btnStart.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if(service==null){
+                    service = new StepService();
+                    Intent intent = new Intent(MainActivity.this,StepService.class);
+                    intent.putExtra("steps",steps);
+                    startService(intent);
+                }
+            }
+        });
+        btnStop.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+
+            }
+        });
     }
 
     protected void onResume() {
         super.onResume();
-        mSensorManager.registerListener(this, mAccelerometerSensor, SensorManager.SENSOR_DELAY_UI);
         this.isFirstValue = false;
         if (useOrientationAPI) {
             mSensorManager.registerListener(this, mAccelerometerSensor, SensorManager.SENSOR_DELAY_UI);
@@ -58,7 +95,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     protected void onPause() {
         super.onPause();
-        mSensorManager.unregisterListener(this, mAccelerometerSensor);
         if (useOrientationAPI) {
             mSensorManager.unregisterListener(this, mAccelerometerSensor);
             mSensorManager.unregisterListener(this, mMagnetometerSensor);
@@ -109,7 +145,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     public void rotateUsingOrientationSensor(SensorEvent event) {
         //only 4 times in 1 second
-        if (System.currentTimeMillis() - lastUpdateTime > 250) {
+        if (System.currentTimeMillis() - lastUpdateTime > 0) {
             float angleInDegress = event.values[0];
             RotateAnimation mRotateAnimation = new RotateAnimation(
                     mCurrentDegree, -angleInDegress, Animation.RELATIVE_TO_SELF, 0.5f, Animation.RELATIVE_TO_SELF, 0.5f);
@@ -131,7 +167,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             mLastMagnetometerSet = true;
         }
         //only 4 times in 1 second
-        if (mLastAccelerometerSet && mLastMagnetometerSet && System.currentTimeMillis() - lastUpdateTime > 250) {
+        if (mLastAccelerometerSet && mLastMagnetometerSet && System.currentTimeMillis() - lastUpdateTime > 0) {
             SensorManager.getRotationMatrix(mRotationMatrix, null, mLastAccelerometer, mLastMagnetometer);
             SensorManager.getOrientation(mRotationMatrix, mOrientation);
             float azimuthInRadians = mOrientation[0];

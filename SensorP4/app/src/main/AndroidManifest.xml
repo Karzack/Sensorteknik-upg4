@@ -24,6 +24,12 @@
             </intent-filter>
         </activity>
         <activity android:name=".MainActivity"></activity>
+        <service
+            android:name=".StepService"
+            android:icon="@drawable/compass"
+            android:label="@string/service_name"
+            >
+        </service>
     </application>
 
 </manifest>
