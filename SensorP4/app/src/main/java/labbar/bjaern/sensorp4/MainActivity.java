@@ -1,5 +1,7 @@
 package labbar.bjaern.sensorp4;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -14,6 +16,8 @@ import android.view.animation.RotateAnimation;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
+
+import static labbar.bjaern.sensorp4.R.id.btnReset;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
 
@@ -39,10 +43,13 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private Sensor mStepCounter;
     private Button btnStop;
     private Button btnStart;
+    private Button btnReset;
     private StepService service;
     private TextView tvStepsPerSecond;
     private TextView tvSteps;
     private int steps;
+    private BroadcastReceiver reciever;
+    private Intent intent;
     FeedReaderDbHelper mDbHelper = new FeedReaderDbHelper(this);
 
     @Override
@@ -55,29 +62,41 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         mMagnetometerSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
         mOrientationSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_ORIENTATION);
         mCompass = (ImageView) findViewById(R.id.ivCompass);
-        btnStart = (Button)findViewById(R.id.btnStart);
-        btnStop = (Button)findViewById(R.id.btnStop);
-        tvSteps = (TextView)findViewById(R.id.tvSteps);
-        tvStepsPerSecond = (TextView)findViewById(R.id.tvStepsPerSeconds);
+        btnStart = (Button) findViewById(R.id.btnStart);
+        btnStop = (Button) findViewById(R.id.btnStop);
+        btnReset = (Button) findViewById(R.id.btnReset);
+        tvSteps = (TextView) findViewById(R.id.tvSteps);
+        tvStepsPerSecond = (TextView) findViewById(R.id.tvStepsPerSeconds);
         initClickListeners();
+        reciever = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                tvSteps.setText(intent.getExtras().getString("steps"));
+            }
+        };
+
     }
 
     private void initClickListeners() {
         btnStart.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if(service==null){
-                    service = new StepService();
-                    Intent intent = new Intent(MainActivity.this,StepService.class);
-                    intent.putExtra("steps",steps);
-                    startService(intent);
-                }
+                intent = new Intent(MainActivity.this, StepService.class);
+                intent.putExtra("steps", steps);
+                startService(intent);
             }
         });
         btnStop.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-
+                stopService(intent);
+            }
+        });
+        btnReset.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                stopService(intent);
+                intent = new Intent(MainActivity.this, StepService.class);
             }
         });
     }
@@ -122,16 +141,16 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 last_y = y;
                 last_z = z;
                 isFirstValue = true;
-                if(useOrientationAPI)
+                if (useOrientationAPI)
                     rotateUsingOrientationAPI(sensorEvent);
                 break;
             case Sensor.TYPE_ORIENTATION:
-                if(!useOrientationAPI) {
+                if (!useOrientationAPI) {
                     rotateUsingOrientationSensor(sensorEvent);
                 }
                 break;
             case Sensor.TYPE_MAGNETIC_FIELD:
-                if(useOrientationAPI){
+                if (useOrientationAPI) {
                     rotateUsingOrientationAPI(sensorEvent);
                 }
         }
